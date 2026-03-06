@@ -2,7 +2,7 @@
 
 ## Project info
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+**URL**: [Lovable/Cursor App](https://sloan-syllabus-simplify.lovable.app)
 
 ## How can I edit this code?
 
