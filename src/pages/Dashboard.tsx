@@ -1,6 +1,17 @@
 import { useState, useMemo } from "react";
 import { motion } from "framer-motion";
-import { format, parseISO, isSameDay, startOfMonth, endOfMonth, eachDayOfInterval, getDay, addMonths, subMonths } from "date-fns";
+import {
+  format,
+  parseISO,
+  isSameDay,
+  startOfMonth,
+  endOfMonth,
+  eachDayOfInterval,
+  getDay,
+  addMonths,
+  subMonths,
+  isToday,
+} from "date-fns";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { deadlines, courses, getCourse, typeLabels } from "@/data/mockData";
@@ -16,10 +27,17 @@ const courseColors: Record<string, string> = {
   strategy: "bg-emerald-500/10 text-emerald-600 border-emerald-500/20",
 };
 
+const courseDotColors: Record<string, string> = {
+  pm: "bg-primary",
+  analytics: "bg-blue-500",
+  timeseries: "bg-amber-500",
+  strategy: "bg-emerald-500",
+};
+
 const Dashboard = () => {
-  const [view, setView] = useState<View>("list");
+  const [view, setView] = useState<View>("calendar");
   const [courseFilter, setCourseFilter] = useState<FilterType>("all");
-  const [currentMonth, setCurrentMonth] = useState(new Date(2026, 2, 1)); // March 2026
+  const [currentMonth, setCurrentMonth] = useState(new Date(2026, 2, 1));
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
 
   const filtered = useMemo(() => {
@@ -28,7 +46,6 @@ const Dashboard = () => {
     return items;
   }, [courseFilter]);
 
-  // Calendar helpers
   const monthStart = startOfMonth(currentMonth);
   const monthEnd = endOfMonth(currentMonth);
   const days = eachDayOfInterval({ start: monthStart, end: monthEnd });
@@ -37,11 +54,20 @@ const Dashboard = () => {
   const deadlinesOnDate = (date: Date) =>
     filtered.filter((d) => isSameDay(parseISO(d.dueDate), date));
 
+  // Get upcoming important dates (next 5)
+  const importantDates = useMemo(() => {
+    return filtered.slice(0, 6);
+  }, [filtered]);
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
       <div className="sticky top-0 z-30 border-b bg-card/95 backdrop-blur-md px-4 pt-4 pb-3">
-        <h1 className="text-lg font-bold text-foreground">Dashboard</h1>
+        <div className="flex items-center justify-between">
+          <h1 className="text-lg font-bold text-foreground">
+            {format(new Date(), "EEEE, MMMM d")}
+          </h1>
+        </div>
 
         {/* View toggle */}
         <div className="mt-3 flex gap-1 rounded-full bg-secondary p-1 w-fit">
@@ -93,147 +119,247 @@ const Dashboard = () => {
 
       <div className="mx-auto max-w-lg px-4 py-4">
         {view === "list" ? (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="space-y-2"
-          >
-            {filtered.map((d, i) => {
-              const course = getCourse(d.courseId);
-              return (
-                <motion.div
-                  key={d.id}
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: i * 0.03 }}
-                  className="flex items-start gap-3 rounded-xl border bg-card px-4 py-3"
-                >
-                  <div className="mt-0.5 text-center shrink-0 w-10">
-                    <p className="text-xs text-muted-foreground">
-                      {format(parseISO(d.dueDate), "MMM")}
-                    </p>
-                    <p className="text-lg font-bold text-foreground leading-tight">
-                      {format(parseISO(d.dueDate), "d")}
-                    </p>
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium text-foreground truncate">{d.title}</p>
-                    <div className="mt-1 flex flex-wrap items-center gap-1.5">
-                      <Badge
-                        variant="outline"
-                        className={cn("text-[10px] px-2 py-0 rounded-full", courseColors[d.courseId])}
-                      >
-                        {course?.number}
-                      </Badge>
-                      <span className="text-[10px] text-muted-foreground capitalize">
-                        {typeLabels[d.type]}
-                      </span>
-                      {d.weight && (
-                        <span className="text-[10px] text-muted-foreground">
-                          · {d.weight}%
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                </motion.div>
-              );
-            })}
-          </motion.div>
+          <ListView filtered={filtered} courseColors={courseColors} />
         ) : (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-            {/* Month nav */}
-            <div className="flex items-center justify-between mb-4">
-              <button onClick={() => setCurrentMonth(subMonths(currentMonth, 1))} className="p-1 text-muted-foreground hover:text-foreground">
-                <ChevronLeft className="h-5 w-5" />
-              </button>
-              <h2 className="text-sm font-semibold text-foreground">
-                {format(currentMonth, "MMMM yyyy")}
-              </h2>
-              <button onClick={() => setCurrentMonth(addMonths(currentMonth, 1))} className="p-1 text-muted-foreground hover:text-foreground">
-                <ChevronRight className="h-5 w-5" />
-              </button>
-            </div>
-
-            {/* Day headers */}
-            <div className="grid grid-cols-7 text-center mb-2">
-              {["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"].map((d) => (
-                <span key={d} className="text-[10px] text-muted-foreground font-medium">{d}</span>
-              ))}
-            </div>
-
-            {/* Days grid */}
-            <div className="grid grid-cols-7 gap-y-1">
-              {Array.from({ length: startPad }).map((_, i) => (
-                <div key={`pad-${i}`} />
-              ))}
-              {days.map((day) => {
-                const dayDeadlines = deadlinesOnDate(day);
-                const isSelected = selectedDate && isSameDay(day, selectedDate);
-                return (
-                  <button
-                    key={day.toISOString()}
-                    onClick={() => setSelectedDate(isSelected ? null : day)}
-                    className={cn(
-                      "relative flex flex-col items-center py-1.5 rounded-lg text-sm transition-colors",
-                      isSelected
-                        ? "bg-primary text-primary-foreground"
-                        : "hover:bg-secondary text-foreground"
-                    )}
-                  >
-                    {format(day, "d")}
-                    {dayDeadlines.length > 0 && (
-                      <div className="flex gap-0.5 mt-0.5">
-                        {dayDeadlines.slice(0, 3).map((dd) => (
-                          <span
-                            key={dd.id}
-                            className={cn(
-                              "h-1 w-1 rounded-full",
-                              isSelected ? "bg-primary-foreground" : "bg-primary"
-                            )}
-                          />
-                        ))}
-                      </div>
-                    )}
-                  </button>
-                );
-              })}
-            </div>
-
-            {/* Selected date items */}
-            {selectedDate && (
-              <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: "auto" }}
-                className="mt-4 space-y-2"
-              >
-                <p className="text-xs font-medium text-muted-foreground">
-                  {format(selectedDate, "EEEE, MMMM d")}
-                </p>
-                {deadlinesOnDate(selectedDate).length === 0 ? (
-                  <p className="text-xs text-muted-foreground italic">No deadlines this day</p>
-                ) : (
-                  deadlinesOnDate(selectedDate).map((d) => {
-                    const course = getCourse(d.courseId);
-                    return (
-                      <div key={d.id} className="flex items-center gap-3 rounded-xl border bg-card px-4 py-3">
-                        <div className="min-w-0">
-                          <p className="text-sm font-medium text-foreground">{d.title}</p>
-                          <p className="text-xs text-muted-foreground">
-                            {course?.number} · {typeLabels[d.type]}
-                            {d.weight ? ` · ${d.weight}%` : ""}
-                          </p>
-                        </div>
-                      </div>
-                    );
-                  })
-                )}
-              </motion.div>
-            )}
-          </motion.div>
+          <CalendarView
+            currentMonth={currentMonth}
+            setCurrentMonth={setCurrentMonth}
+            selectedDate={selectedDate}
+            setSelectedDate={setSelectedDate}
+            days={days}
+            startPad={startPad}
+            deadlinesOnDate={deadlinesOnDate}
+            importantDates={importantDates}
+            courseColors={courseColors}
+            courseDotColors={courseDotColors}
+          />
         )}
       </div>
     </div>
   );
 };
+
+/* ─── List View ─── */
+function ListView({
+  filtered,
+  courseColors,
+}: {
+  filtered: typeof deadlines;
+  courseColors: Record<string, string>;
+}) {
+  return (
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-2">
+      {filtered.map((d, i) => {
+        const course = getCourse(d.courseId);
+        return (
+          <motion.div
+            key={d.id}
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: i * 0.03 }}
+            className="flex items-start gap-3 rounded-xl border bg-card px-4 py-3"
+          >
+            <div className="mt-0.5 text-center shrink-0 w-10">
+              <p className="text-xs text-muted-foreground">{format(parseISO(d.dueDate), "MMM")}</p>
+              <p className="text-lg font-bold text-foreground leading-tight">
+                {format(parseISO(d.dueDate), "d")}
+              </p>
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-medium text-foreground truncate">{d.title}</p>
+              <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                <Badge
+                  variant="outline"
+                  className={cn("text-[10px] px-2 py-0 rounded-full", courseColors[d.courseId])}
+                >
+                  {course?.number}
+                </Badge>
+                <span className="text-[10px] text-muted-foreground capitalize">
+                  {typeLabels[d.type]}
+                </span>
+                {d.weight && (
+                  <span className="text-[10px] text-muted-foreground">· {d.weight}%</span>
+                )}
+              </div>
+            </div>
+          </motion.div>
+        );
+      })}
+    </motion.div>
+  );
+}
+
+/* ─── Calendar View (matching wireframe) ─── */
+function CalendarView({
+  currentMonth,
+  setCurrentMonth,
+  selectedDate,
+  setSelectedDate,
+  days,
+  startPad,
+  deadlinesOnDate,
+  importantDates,
+  courseColors,
+  courseDotColors,
+}: {
+  currentMonth: Date;
+  setCurrentMonth: (d: Date) => void;
+  selectedDate: Date | null;
+  setSelectedDate: (d: Date | null) => void;
+  days: Date[];
+  startPad: number;
+  deadlinesOnDate: (d: Date) => typeof deadlines;
+  importantDates: typeof deadlines;
+  courseColors: Record<string, string>;
+  courseDotColors: Record<string, string>;
+}) {
+  return (
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
+      {/* Important Dates sidebar section */}
+      <div className="rounded-xl border bg-card p-4">
+        <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">
+          Important Dates
+        </h3>
+        <div className="space-y-2.5">
+          {importantDates.map((d) => {
+            const course = getCourse(d.courseId);
+            return (
+              <div key={d.id} className="flex items-start gap-2.5">
+                <div className={cn("mt-1 h-2 w-2 rounded-full shrink-0", courseDotColors[d.courseId])} />
+                <div className="min-w-0">
+                  <p className="text-xs font-medium text-foreground leading-tight">{d.title}</p>
+                  <p className="text-[10px] text-muted-foreground">
+                    {course?.number} · {format(parseISO(d.dueDate), "MMM d")}
+                  </p>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Month calendar */}
+      <div className="rounded-xl border bg-card p-4">
+        {/* Month nav */}
+        <div className="flex items-center justify-between mb-4">
+          <button
+            onClick={() => setCurrentMonth(subMonths(currentMonth, 1))}
+            className="p-1 text-muted-foreground hover:text-foreground"
+          >
+            <ChevronLeft className="h-5 w-5" />
+          </button>
+          <h2 className="text-sm font-semibold text-foreground">
+            {format(currentMonth, "MMMM yyyy")}
+          </h2>
+          <button
+            onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}
+            className="p-1 text-muted-foreground hover:text-foreground"
+          >
+            <ChevronRight className="h-5 w-5" />
+          </button>
+        </div>
+
+        {/* Day headers */}
+        <div className="grid grid-cols-7 text-center mb-1">
+          {["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"].map((d) => (
+            <span key={d} className="text-[10px] text-muted-foreground font-medium py-1">
+              {d}
+            </span>
+          ))}
+        </div>
+
+        {/* Days grid with assignment text */}
+        <div className="grid grid-cols-7">
+          {Array.from({ length: startPad }).map((_, i) => (
+            <div key={`pad-${i}`} className="min-h-[72px]" />
+          ))}
+          {days.map((day) => {
+            const dayDeadlines = deadlinesOnDate(day);
+            const isSelected = selectedDate && isSameDay(day, selectedDate);
+            const today = isToday(day);
+
+            return (
+              <button
+                key={day.toISOString()}
+                onClick={() => setSelectedDate(isSelected ? null : day)}
+                className={cn(
+                  "relative flex flex-col items-start p-1 min-h-[72px] border-t border-border/50 text-left transition-colors",
+                  isSelected
+                    ? "bg-primary/5"
+                    : "hover:bg-secondary/50"
+                )}
+              >
+                <span
+                  className={cn(
+                    "text-[11px] font-medium leading-none mb-1",
+                    today
+                      ? "bg-primary text-primary-foreground rounded-full w-5 h-5 flex items-center justify-center"
+                      : "text-foreground"
+                  )}
+                >
+                  {format(day, "d")}
+                </span>
+                {/* Show assignment titles in the cell */}
+                <div className="w-full space-y-0.5 overflow-hidden">
+                  {dayDeadlines.slice(0, 2).map((dd) => (
+                    <div
+                      key={dd.id}
+                      className={cn(
+                        "text-[8px] leading-tight px-1 py-0.5 rounded truncate font-medium",
+                        courseColors[dd.courseId]
+                      )}
+                    >
+                      {dd.title.length > 18 ? dd.title.slice(0, 18) + "…" : dd.title}
+                    </div>
+                  ))}
+                  {dayDeadlines.length > 2 && (
+                    <span className="text-[8px] text-muted-foreground px-1">
+                      +{dayDeadlines.length - 2} more
+                    </span>
+                  )}
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Selected date detail */}
+      {selectedDate && (
+        <motion.div
+          initial={{ opacity: 0, height: 0 }}
+          animate={{ opacity: 1, height: "auto" }}
+          className="rounded-xl border bg-card p-4 space-y-2"
+        >
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+            {format(selectedDate, "EEEE, MMMM d")}
+          </p>
+          {deadlinesOnDate(selectedDate).length === 0 ? (
+            <p className="text-xs text-muted-foreground italic">No deadlines this day</p>
+          ) : (
+            deadlinesOnDate(selectedDate).map((d) => {
+              const course = getCourse(d.courseId);
+              return (
+                <div
+                  key={d.id}
+                  className="flex items-center gap-3 rounded-lg border bg-background px-3 py-2.5"
+                >
+                  <div className={cn("h-2 w-2 rounded-full shrink-0", courseDotColors[d.courseId])} />
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-foreground">{d.title}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {course?.number} · {typeLabels[d.type]}
+                      {d.weight ? ` · ${d.weight}%` : ""}
+                    </p>
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </motion.div>
+      )}
+    </motion.div>
+  );
+}
 
 export default Dashboard;
