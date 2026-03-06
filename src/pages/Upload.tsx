@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Upload as UploadIcon, FileText, CheckCircle2, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { courses } from "@/data/mockData";
+import { MitSloanLogo } from "@/components/MitSloanLogo";
 
 type Stage = "idle" | "uploading" | "parsing" | "done";
 
@@ -20,7 +21,10 @@ const Upload = () => {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center px-6 bg-background">
       <div className="w-full max-w-md">
-        <h1 className="text-2xl font-bold text-center text-foreground mb-2">Upload Syllabi</h1>
+        <div className="flex items-center justify-center gap-3 mb-2">
+          <MitSloanLogo className="h-6" />
+          <h1 className="text-2xl font-bold text-foreground">Upload Syllabi</h1>
+        </div>
         <p className="text-sm text-muted-foreground text-center mb-8">
           Drop your PDF syllabi here to extract deadlines and course info
         </p>

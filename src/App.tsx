@@ -23,7 +23,7 @@ const App = () => (
           <Route element={<AppLayout />}>
             <Route path="/upload" element={<Upload />} />
             <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/calendar" element={<Dashboard />} />
+            <Route path="/calendar" element={<Dashboard mode="calendar" />} />
             <Route path="/courses" element={<Courses />} />
           </Route>
           <Route path="*" element={<NotFound />} />

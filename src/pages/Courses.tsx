@@ -4,6 +4,7 @@ import { ChevronDown, Clock, MapPin, User, BookOpen } from "lucide-react";
 import { courses, getDeadlinesForCourse } from "@/data/mockData";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
+import { MitSloanLogo } from "@/components/MitSloanLogo";
 
 const Courses = () => {
   const [expanded, setExpanded] = useState<string | null>(null);
@@ -11,7 +12,10 @@ const Courses = () => {
   return (
     <div className="min-h-screen bg-background">
       <div className="sticky top-0 z-30 border-b bg-card/95 backdrop-blur-md px-4 pt-4 pb-3">
-        <h1 className="text-lg font-bold text-foreground">Courses</h1>
+        <div className="flex items-center gap-2">
+          <MitSloanLogo className="h-6" />
+          <h1 className="text-lg font-bold text-foreground">Courses</h1>
+        </div>
         <p className="text-xs text-muted-foreground mt-0.5">
           {courses.length} enrolled courses
         </p>

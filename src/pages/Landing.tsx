@@ -2,6 +2,7 @@ import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { BookOpen, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { MitSloanLogo } from "@/components/MitSloanLogo";
 
 const Landing = () => {
   const navigate = useNavigate();
@@ -18,9 +19,12 @@ const Landing = () => {
           <BookOpen className="h-10 w-10 text-primary" />
         </div>
 
-        <h1 className="text-3xl font-bold tracking-tight text-foreground">
-          Simplify Your Syllabus
-        </h1>
+        <div className="flex items-center justify-center gap-3">
+          <MitSloanLogo className="h-7" />
+          <h1 className="text-3xl font-bold tracking-tight text-foreground">
+            Simplify Your Syllabus
+          </h1>
+        </div>
         <p className="mt-3 text-base text-muted-foreground leading-relaxed">
           Upload your syllabus, and this tool does the rest. All your deadlines,
           grades, and course info — organized in one place.
